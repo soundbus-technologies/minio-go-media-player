@@ -32,6 +32,12 @@ $(document).ready(function() {
         fnAfter();
     }
 
+    function setCurrentSettingDisplay(repeatTimes, sleepTimeInSeconds) {
+        $('.jp-setting-display').text(repeatTimes + "/" + sleepTimeInSeconds);
+    }
+
+    setCurrentSettingDisplay(singlePlayTimes, sleepTimeInSeconds);
+
     // obtain the playlist form the server.
     $.ajax({
         type: 'GET',
@@ -112,6 +118,7 @@ $(document).ready(function() {
                             }
                             alert("当前配置为\n单曲播放次数：" + singlePlayTimes + "\n播放间隔时间: " + sleepTimeInSeconds + "秒");
                         }
+                        setCurrentSettingDisplay(singlePlayTimes, sleepTimeInSeconds);
                     });
                 },
                 // event called after current audio finishes playing and before next one starts playing.
@@ -191,13 +198,16 @@ $(document).ready(function() {
 							<div class="jp-volume-bar-value"></div>
 						</div>
 					</div>
-					<div class="jp-controls five-btns">
+					<div class="jp-controls">
 						<button class="jp-previous" role="button" tabindex="0">previous</button>
 						<button class="jp-play" role="button" tabindex="0">play</button>
 						<button class="jp-stop" role="button" tabindex="0">stop</button>
 						<button class="jp-next" role="button" tabindex="0">next</button>
-						<button class="jp-setting" role="button" tabindex="0">setting</button>
 					</div>
+                    <div class="jp-settings">
+                        <button class="jp-setting" role="button" tabindex="0">setting</button>
+                        <span class="jp-setting-display"></span>
+                    </div>
 					<div class="jp-toggles">
                         <!--
 						<button class="jp-repeat" role="button" tabindex="0">repeat</button>
