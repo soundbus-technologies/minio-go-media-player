@@ -15,10 +15,22 @@
 $(document).ready(function() {
 
     var listObjects = [];
-    var defaultSinglePlayTimes = 15;
+    var defaultSinglePlayTimes = 2;
     var singlePlayTimes = defaultSinglePlayTimes;
     var defaultSleepTimeInSeconds = 10;
     var sleepTimeInSeconds = defaultSleepTimeInSeconds;
+    var currentSongPlayedTimes = 0;
+    var $jplist = null;
+
+    function sleep(ms) {
+        return new Promise(resolve => setTimeout(resolve, ms));
+    }
+
+    async function waitThen(ms, fnBefore, fnAfter) {
+        fnBefore();
+        await sleep(ms);
+        fnAfter();
+    }
 
     // obtain the playlist form the server.
     $.ajax({
@@ -36,13 +48,14 @@ $(document).ready(function() {
                 })
             }
             // create the player instance.
-            new jPlayerPlaylist({
+            $jplist = new jPlayerPlaylist({
                 jPlayer: "#jquery_jplayer_1",
                 cssSelectorAncestor: "#jp_container_1"
             }, listObjects, {
                 swfPath: "assets/jplayer",
                 solution: "flash, html",
                 supplied: "mp3",
+                loop: true,
                 useStateClassSkin: true,
                 autoBlur: false,
                 smoothPlayBar: true,
@@ -83,44 +96,65 @@ $(document).ready(function() {
 
                         var value = prompt("请输入单曲播放次数：", singlePlayTimes.toString());
 
-                        if (value == null || value == "") {
+                        if (value == null || value === "" || isNaN(parseInt(value)) || parseInt(value) <= 0) {
                             alert("无效的输入!配置将不会生效！");
                         } else {
-                            singlePlayTimes = value;
+                            singlePlayTimes = parseInt(value);
+                            if (singlePlayTimes === 1) {
+                                $jplist.loop = false;
+                            }
+
                             value = prompt("请输入播放间隔时间，单位为秒：", sleepTimeInSeconds.toString());
-                            if (value == null || value == "") {
+                            if (value == null || value === "" || isNaN(parseInt(value)) || parseInt(value) <= 0) {
                                 alert("无效的输入!配置将不会生效！");
                             } else {
-                                sleepTimeInSeconds = value;
-
-                                alert("设置成功，配置为\n单曲播放次数：" + singlePlayTimes + "\n播放间隔时间: " + sleepTimeInSeconds + "秒");
+                                sleepTimeInSeconds = parseInt(value);
                             }
+                            alert("当前配置为\n单曲播放次数：" + singlePlayTimes + "\n播放间隔时间: " + sleepTimeInSeconds + "秒");
                         }
                     });
                 },
                 // event called after current audio finishes playing and before next one starts playing.
                 // Presigned URL is fetched for the new audio.
                 ended: function(e) {
+                    currentSongPlayedTimes++;
+                    if (currentSongPlayedTimes < singlePlayTimes) {
+                        if (currentSongPlayedTimes === (singlePlayTimes -1)) {
+                            $jplist.loop = false;
+                        }
+                        return;
+                    }
 
-                    // Obtaining the name of the currently active media.
-                    var activeMedia = $("a.jp-playlist-current").html()
-                    $.ajax({
-                        url: "/getpresign/v1",
-                        datatype: 'json',
-                        type: "get",
-                        data: {
-                            objname: activeMedia,
-                        },
-                        // response contains the pres signed URL.
-                        success: function(response) {
-                            // Setting the presigned URL as the media URL.
-                            $(this).jPlayer("setMedia", {
-                                mp3: response,
-                                error: function(error) {
-                                    console.log(error)
-                                }
-                            }).jPlayer("play");
-                        }.bind(this)
+                    currentSongPlayedTimes = 0;
+                    $jplist.loop = true;
+                    var activeMedia = $("a.jp-playlist-current").html();
+
+                    var resp = null;
+                    waitThen(sleepTimeInSeconds * 1000, function () {
+                        console.log("getting media...");
+                        $jplist.pause();
+                        // Obtaining the name of the currently active media.
+                        $.ajax({
+                            url: "/getpresign/v1",
+                            datatype: 'json',
+                            type: "get",
+                            data: {
+                                objname: activeMedia,
+                            },
+                            // response contains the pres signed URL.
+                            success: function(response) {
+                                resp = response;
+                            }.bind(this)
+                        });
+                    }, function () {
+                        console.log("Start to play media");
+                        $(this).jPlayer("setMedia", {
+                            mp3: resp,
+                            error: function(error) {
+                                console.log(error)
+                            }
+                        }).jPlayer("play");
+                        $jplist.play();
                     });
                 }
             });
