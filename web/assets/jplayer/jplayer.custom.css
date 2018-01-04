@@ -1,0 +1,13 @@
+.jp-video-360p.jp-video .jp-controls-holder {
+    width: 600px;
+}
+
+.jp-video-360p .jp-controls.five-btns {
+    width: 252px;
+}
+
+.jp-type-playlist .jp-setting {
+    background: url(./image/setting-icon.png) no-repeat;
+    background-size: 24px;
+    background-position:center;
+}
