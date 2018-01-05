@@ -3,19 +3,20 @@ package main
 import (
 	"encoding/json"
 	"flag"
-	"log"
 	"net/http"
 	"net/url"
 	"os"
 	"time"
 
-	"github.com/minio/minio-go"
 	"github.com/gin-gonic/gin"
+	"github.com/minio/minio-go"
+	log "github.com/sirupsen/logrus"
 )
 
 var (
-	bucketName = flag.String("b", "", "Bucket name to be used for media assets.")
-	endPoint   = flag.String("e", "https://play.minio.io:9000", "Choose a custom endpoint.")
+	bucketName  = flag.String("b", "", "Bucket name to be used for media assets.")
+	endPoint    = flag.String("e", "https://play.minio.io:9000", "Choose a custom endpoint.")
+	logFilePath = flag.String("l", "./minio-go-media-player.log", "Set a log file.")
 )
 
 // The mediaPlayList for the music player on the browser.
@@ -87,6 +88,19 @@ func findHost(urlStr string) string {
 	return u.Host
 }
 
+func initLogSetting(filePath string) {
+	customFormatter := new(log.JSONFormatter)
+	customFormatter.TimestampFormat = time.RFC3339Nano
+	log.SetFormatter(customFormatter)
+	file, err := os.OpenFile(filePath, os.O_WRONLY|os.O_CREATE, 0755)
+	if err == nil {
+		log.SetOutput(file)
+	} else {
+		log.SetOutput(os.Stdout)
+		log.Info("Failed to log to file, using default stdout")
+	}
+}
+
 func main() {
 	flag.Parse()
 
@@ -97,6 +111,8 @@ func main() {
 
 	// Fetch access keys if possible or fail.
 	accessKey, secretKey := mustGetAccessKeys()
+
+	initLogSetting(*logFilePath)
 
 	// Initialize minio client.
 	minioClient, err := minio.New(findHost(*endPoint), accessKey, secretKey, isSecure(*endPoint))
@@ -110,7 +126,7 @@ func main() {
 	}
 
 	var enableGin = true
-	if (enableGin) {
+	if enableGin {
 		r := gin.Default()
 		// Handler to serve the index page.
 		r.Static("/player", "web")
@@ -137,7 +153,6 @@ func main() {
 		// End point for list object operations.
 		// Called when player in the front end is initialized.
 		http.HandleFunc("/list/v1", mediaPlayer.ListObjectsHandler)
-
 
 		// Given point which receives the object name and returns presigned URL in the response.
 		http.HandleFunc("/getpresign/v1", mediaPlayer.GetPresignedURLHandler)
@@ -247,7 +262,10 @@ func (api mediaHandlers) ListObjectsHandler(w http.ResponseWriter, r *http.Reque
 }
 
 func (api *mediaHandlers) GetPlayingMedia(c *gin.Context) {
-	c.String(http.StatusOK, api.currentPlayingMedia)
+	ts := c.Query("ts")
+	appId := c.Query("appId")
+	log.Println("GetPlayingMedia: ", api.currentPlayingMedia, ",", ts, ",", appId)
+	c.String(http.StatusOK, api.currentPlayingMedia+","+ts)
 	return
 }
 
@@ -261,6 +279,7 @@ func (api *mediaHandlers) SetPlayingMedia(c *gin.Context) {
 	objectName := c.PostForm("objname")
 	if objectName != "" {
 		api.currentPlayingMedia = objectName
+		log.Println("SetPlayingMedia: ", api.currentPlayingMedia)
 	}
 	c.String(http.StatusOK, objectName)
 	return
@@ -282,7 +301,6 @@ func (api mediaHandlers) GetPresignedURLHandler2(c *gin.Context) {
 	}
 	c.String(http.StatusOK, presignedURL.String())
 }
-
 
 // GetPresignedURLHandler - generates presigned access URL for an object.
 func (api mediaHandlers) GetPresignedURLHandler(w http.ResponseWriter, r *http.Request) {
