@@ -21,6 +21,8 @@ $(document).ready(function() {
     var sleepTimeInSeconds = defaultSleepTimeInSeconds;
     var currentSongPlayedTimes = 0;
     var currentPlayingMedia = "";
+    var pausedByProgram = false;
+    var readyToUpdatePlayingMediaInfo = true;
     var $jplist = null;
 
     function sleep(ms) {
@@ -88,7 +90,7 @@ $(document).ready(function() {
                     // start playing the first song in the list once loaded.
                     $player.jPlayer("play");
                     $player.bind($.jPlayer.event.play, function(event) {
-                        if (event.jPlayer.status.media && event.jPlayer.status.media.title) {
+                        if (readyToUpdatePlayingMediaInfo && event.jPlayer.status.media && event.jPlayer.status.media.title) {
                             $.ajax({
                                 url: "/media/playing",
                                 type: "post",
@@ -107,7 +109,16 @@ $(document).ready(function() {
                     });
 
                     $player.bind($.jPlayer.event.pause, function(event) {
-                        clearCurrentPlayingMediaInfo();
+                        if (pausedByProgram) {
+                            // delay 1 second to clear current playing media
+                            waitThen(1000, function () {
+
+                            }, function () {
+                                clearCurrentPlayingMediaInfo();
+                            });
+
+                            pausedByProgram = false;
+                        }
                     });
 
                     $(".jp-playlist-item").click(function(event) {
@@ -176,6 +187,8 @@ $(document).ready(function() {
 
                     var resp = null;
                     waitThen(sleepTimeInSeconds * 1000, function () {
+                        pausedByProgram = true;
+                        readyToUpdatePlayingMediaInfo = false;
                         $jplist.pause();
                         console.log("paused");
                         console.log("getting media...");
@@ -200,6 +213,7 @@ $(document).ready(function() {
                                 console.log(error)
                             }
                         }).jPlayer("play");
+                        readyToUpdatePlayingMediaInfo = true;
                         $jplist.play();
                     });
                 }
