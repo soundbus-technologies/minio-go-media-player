@@ -15,11 +15,12 @@
 $(document).ready(function() {
 
     var listObjects = [];
-    var defaultSinglePlayTimes = 2;
+    var defaultSinglePlayTimes = 15;
     var singlePlayTimes = defaultSinglePlayTimes;
     var defaultSleepTimeInSeconds = 10;
     var sleepTimeInSeconds = defaultSleepTimeInSeconds;
     var currentSongPlayedTimes = 0;
+    var currentPlayingMedia = "";
     var $jplist = null;
 
     function sleep(ms) {
@@ -37,6 +38,20 @@ $(document).ready(function() {
     }
 
     setCurrentSettingDisplay(singlePlayTimes, sleepTimeInSeconds);
+
+    // clear current playing media info
+    function clearCurrentPlayingMediaInfo() {
+        $.ajax({
+            url: "/media/pause",
+            datatype: 'json',
+            type: "get",
+            // response contains the pres signed URL.
+            success: function(response) {
+            }
+        });
+    }
+
+    clearCurrentPlayingMediaInfo();
 
     // obtain the playlist form the server.
     $.ajax({
@@ -69,9 +84,32 @@ $(document).ready(function() {
                 audioFullScreen: true,
                 ready: function(e) {
                     // reference to the player.
-                    var $player = $(this)
+                    var $player = $(this);
                     // start playing the first song in the list once loaded.
-                    $player.jPlayer("play")
+                    $player.jPlayer("play");
+                    $player.bind($.jPlayer.event.play, function(event) {
+                        if (event.jPlayer.status.media && event.jPlayer.status.media.title) {
+                            $.ajax({
+                                url: "/media/playing",
+                                type: "post",
+                                // Sending the Object name as request query param.
+                                data: {
+                                    objname: event.jPlayer.status.media.title,
+                                },
+                                success: function(response) {
+                                    currentPlayingMedia = event.jPlayer.status.media.title;
+                                }.bind(this),
+                                error: function(xhr) {
+                                    //Do Something to handle error
+                                }
+                            });
+                        }
+                    });
+
+                    $player.bind($.jPlayer.event.pause, function(event) {
+                        clearCurrentPlayingMediaInfo();
+                    });
+
                     $(".jp-playlist-item").click(function(event) {
                         // Obtaining the name of the currently active media.
                         var activeMedia = $(this).html()
@@ -138,8 +176,9 @@ $(document).ready(function() {
 
                     var resp = null;
                     waitThen(sleepTimeInSeconds * 1000, function () {
-                        console.log("getting media...");
                         $jplist.pause();
+                        console.log("paused");
+                        console.log("getting media...");
                         // Obtaining the name of the currently active media.
                         $.ajax({
                             url: "/getpresign/v1",

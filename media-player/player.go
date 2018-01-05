@@ -27,7 +27,8 @@ type mediaPlayList struct {
 
 // mediaHandlers media handlers.
 type mediaHandlers struct {
-	minioClient *minio.Client
+	minioClient         *minio.Client
+	currentPlayingMedia string
 }
 
 var supportedAccesEnvs = []string{
@@ -120,6 +121,10 @@ func main() {
 
 		// Given point which receives the object name and returns presigned URL in the response.
 		r.GET("/getpresign/v1", mediaPlayer.GetPresignedURLHandler2)
+
+		r.GET("/media/playing", mediaPlayer.GetPlayingMedia)
+		r.GET("/media/pause", mediaPlayer.PausePlayingMedia)
+		r.POST("/media/playing", mediaPlayer.SetPlayingMedia)
 
 		log.Println("Starting media player, please visit your browser at http://localhost:8080/player/index.html")
 
@@ -239,6 +244,26 @@ func (api mediaHandlers) ListObjectsHandler(w http.ResponseWriter, r *http.Reque
 	}
 	// Successfully wrote play list in json.
 	w.Write(playListEntriesJSON)
+}
+
+func (api *mediaHandlers) GetPlayingMedia(c *gin.Context) {
+	c.String(http.StatusOK, api.currentPlayingMedia)
+	return
+}
+
+func (api *mediaHandlers) PausePlayingMedia(c *gin.Context) {
+	api.currentPlayingMedia = ""
+	c.String(http.StatusOK, "")
+	return
+}
+
+func (api *mediaHandlers) SetPlayingMedia(c *gin.Context) {
+	objectName := c.PostForm("objname")
+	if objectName != "" {
+		api.currentPlayingMedia = objectName
+	}
+	c.String(http.StatusOK, objectName)
+	return
 }
 
 // GetPresignedURLHandler - generates presigned access URL for an object.
