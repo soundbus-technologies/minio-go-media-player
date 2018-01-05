@@ -265,7 +265,10 @@ func (api *mediaHandlers) GetPlayingMedia(c *gin.Context) {
 	ts := c.Query("ts")
 	appId := c.Query("appId")
 	log.Println("GetPlayingMedia: ", api.currentPlayingMedia, ",", ts, ",", appId)
-	c.String(http.StatusOK, api.currentPlayingMedia+","+ts)
+	c.JSON(http.StatusOK, gin.H{
+		"playing": api.currentPlayingMedia,
+		"ts":      ts,
+	})
 	return
 }
 
