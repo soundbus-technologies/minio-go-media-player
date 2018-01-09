@@ -297,7 +297,7 @@ func (api mediaHandlers) GetPresignedURLHandler2(c *gin.Context) {
 		c.String(http.StatusBadRequest, "No object name set, invalid request.")
 		return
 	}
-	presignedURL, err := api.minioClient.PresignedGetObject(*bucketName, objectName, 1000*time.Second, nil)
+	presignedURL, err := api.minioClient.PresignedGetObject(*bucketName, objectName, 24*7*time.Hour, nil)
 	if err != nil {
 		c.String(http.StatusInternalServerError, err.Error())
 		return
@@ -314,7 +314,7 @@ func (api mediaHandlers) GetPresignedURLHandler(w http.ResponseWriter, r *http.R
 		http.Error(w, "No object name set, invalid request.", http.StatusBadRequest)
 		return
 	}
-	presignedURL, err := api.minioClient.PresignedGetObject(*bucketName, objectName, 1000*time.Second, nil)
+	presignedURL, err := api.minioClient.PresignedGetObject(*bucketName, objectName, 24*7*time.Hour, nil)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
