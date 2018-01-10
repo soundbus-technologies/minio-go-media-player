@@ -193,7 +193,7 @@ func (api mediaHandlers) ListObjectsHandler2(c *gin.Context) {
 			// Generating presigned url for the first object in the list.
 			// presigned URL will be generated on the fly for the
 			// other objects when they are played.
-			expirySecs := 1000 * time.Second // 1000 seconds.
+			expirySecs := 24 * 7 * time.Hour // 7 days.
 			presignedURL, err := api.minioClient.PresignedGetObject(*bucketName, objectName, expirySecs, nil)
 			if err != nil {
 				c.String(http.StatusInternalServerError, err.Error())
