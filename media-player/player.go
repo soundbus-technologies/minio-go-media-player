@@ -17,6 +17,7 @@ var (
 	bucketName  = flag.String("b", "", "Bucket name to be used for media assets.")
 	endPoint    = flag.String("e", "https://play.minio.io:9000", "Choose a custom endpoint.")
 	logFilePath = flag.String("l", "./minio-go-media-player.log", "Set a log file.")
+	port  = flag.String("p", "8080", "Port to serve.")
 )
 
 // The mediaPlayList for the music player on the browser.
@@ -144,8 +145,7 @@ func main() {
 
 		log.Println("Starting media player, please visit your browser at http://localhost:8080/player/index.html")
 
-		// Port is defaulted to "8080" no need to change this.
-		r.Run(":8080")
+		r.Run(":" + *port)
 	} else {
 		// Handler to serve the index page.
 		http.Handle("/", http.FileServer(assetFS()))
@@ -159,8 +159,7 @@ func main() {
 
 		log.Println("Starting media player, please visit your browser at http://localhost:8080")
 
-		// Port is defaulted to "8080" no need to change this.
-		http.ListenAndServe(":8080", nil)
+		http.ListenAndServe(":" + *port, nil)
 	}
 }
 
